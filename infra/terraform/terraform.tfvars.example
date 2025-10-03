@@ -4,6 +4,10 @@ key_name         = "demo-terraform"
 public_key_path  = "~/.ssh/id_rsa.pub"
 private_key_path = "~/.ssh/id_rsa"
 
+# If your key pair already exists in AWS, leave this as false (recommended).
+# Set to true only if you need Terraform to create/import the key pair.
+create_key_pair  = false
+
 # Replace with your public IP for better security:
 # allowed_ssh_cidr = "203.0.113.4/32"
 allowed_ssh_cidr = "0.0.0.0/0"

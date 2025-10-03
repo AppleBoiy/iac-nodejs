@@ -82,7 +82,9 @@ if [[ "$DO_DEPLOY" -eq 1 ]]; then
     INV_FILE="$(mktemp)"
     echo "[all]" > "$INV_FILE"
     echo "server ansible_host=$SERVER_IP ansible_user=ubuntu ansible_ssh_private_key_file=$PRIVATE_KEY" >> "$INV_FILE"
-    ansible-playbook -i "$INV_FILE" node_service.yml --tags app -e "app_repo_url=${REPO_URL}"
+    PLAYBOOK="ansible/playbooks/node_service.yml"
+    [[ -f "$PLAYBOOK" ]] || PLAYBOOK="node_service.yml"
+    ansible-playbook -i "$INV_FILE" "$PLAYBOOK" --tags app -e "app_repo_url=${REPO_URL}"
   else
     echo "ERROR: Neither 'make' nor 'ansible-playbook' found to perform deployment."
     exit 3

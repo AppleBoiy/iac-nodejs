@@ -6,5 +6,6 @@ module "ec2" {
   key_name          = var.key_name
   public_key_path   = var.public_key_path
   allowed_ssh_cidr  = var.allowed_ssh_cidr
+  create_key_pair   = var.create_key_pair
   tags              = var.tags
 }

@@ -34,6 +34,12 @@ variable "allowed_ssh_cidr" {
   default     = "0.0.0.0/0"
 }
 
+variable "create_key_pair" {
+  description = "Whether to create (import) the key pair in AWS; if false, reuse an existing key pair by name"
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)

@@ -13,11 +13,14 @@ PRIVATE_KEY ?= $(HOME)/.ssh/id_rsa
 REPO_URL ?= $(shell git config --get remote.origin.url)
 
 # Playbook and tags for app deployment
-APP_PLAYBOOK ?= node_service.yml
+APP_PLAYBOOK ?= ansible/playbooks/node_service.yml
 APP_TAGS ?= app
 
+# Terraform working directory
+TF_DIR ?= infra/terraform
+
 # Attempt to read EC2 IP from Terraform outputs; can be overridden as SERVER_IP
-SERVER_IP ?= $(shell $(TF) output -raw instance_public_ip 2>/dev/null || true)
+SERVER_IP ?= $(shell $(TF) -chdir=$(TF_DIR) output -raw instance_public_ip 2>/dev/null || true)
 
 # Wait-for-SSH settings
 WAIT_SSH_ATTEMPTS ?= 30
@@ -35,32 +38,41 @@ help: ## Show this help
 # -----------------------
 .PHONY: tf-init
 tf-init: ## Terraform init
-	$(TF) init
+	$(TF) -chdir=$(TF_DIR) init
+
+.PHONY: tf-vars
+tf-vars: ## Create terraform.tfvars from example in $(TF_DIR)
+	@if [ -f "$(TF_DIR)/terraform.tfvars" ]; then \
+		echo "$(TF_DIR)/terraform.tfvars already exists; not overwriting."; \
+	else \
+		cp "$(TF_DIR)/terraform.tfvars.example" "$(TF_DIR)/terraform.tfvars"; \
+		echo "Created $(TF_DIR)/terraform.tfvars"; \
+	fi
 
 .PHONY: tf-validate
 tf-validate: ## Terraform validate
-	$(TF) validate
+	$(TF) -chdir=$(TF_DIR) validate
 
 .PHONY: tf-plan
 tf-plan: ## Terraform plan (outputs tfplan)
-	$(TF) plan -out=tfplan
+	$(TF) -chdir=$(TF_DIR) plan -out=tfplan
 
 .PHONY: tf-apply
 tf-apply: ## Terraform apply using plan (creates/updates infra)
-	@if [ ! -f tfplan ]; then echo "tfplan not found; running plan first..."; $(TF) plan -out=tfplan; fi
-	$(TF) apply tfplan
+	@if [ ! -f "$(TF_DIR)/tfplan" ]; then echo "tfplan not found; running plan first..."; $(TF) -chdir=$(TF_DIR) plan -out=tfplan; fi
+	$(TF) -chdir=$(TF_DIR) apply tfplan
 
 .PHONY: tf-destroy
 tf-destroy: ## Terraform destroy (tear down infra)
-	$(TF) destroy
+	$(TF) -chdir=$(TF_DIR) destroy
 
 .PHONY: tf-outputs
 tf-outputs: ## Show Terraform outputs
-	$(TF) output
+	$(TF) -chdir=$(TF_DIR) output
 
 .PHONY: ip
 ip: ## Print instance public IP (from Terraform outputs)
-	@$(TF) output -raw instance_public_ip
+	@$(TF) -chdir=$(TF_DIR) output -raw instance_public_ip
 
 # -----------------------
 # Ansible deployment
@@ -130,5 +142,5 @@ build-local: ## Build the Node app (if a build script exists)
 # -----------------------
 .PHONY: clean
 clean: ## Clean generated files (plan and inventory)
-	@rm -f tfplan plan.out
+	@rm -f "$(TF_DIR)/tfplan" tfplan "$(TF_DIR)/plan.out" plan.out
 	@rm -f "$(INVENTORY)"

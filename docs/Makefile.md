@@ -17,7 +17,7 @@ Override any variable by prefixing the command, e.g., `SERVER_IP=1.2.3.4 make de
 - INVENTORY: Path to generated Ansible inventory file (default: ansible/inventory.ini).
 - TF: Terraform binary (default: terraform).
 - ANSIBLE_PLAYBOOK: Ansible binary (default: ansible-playbook).
-- APP_PLAYBOOK: Ansible playbook file (default: node_service.yml).
+- APP_PLAYBOOK: Ansible playbook file (default: ansible/playbooks/node_service.yml).
 - APP_TAGS: Tags to run (default: app).
 
 ## Targets
