@@ -2,6 +2,8 @@
 
 This repository contains Infrastructure as Code to provision an Amazon EC2 instance with restricted SSH access. A Makefile is provided to streamline common tasks across Terraform, Ansible, and SSH.
 
+challenge: https://roadmap.sh/projects/nodejs-service-deployment
+
 ## Prerequisites
 
 - Terraform (>= 1.5)
