@@ -1,0 +1,15 @@
+[Unit]
+Description=Node.js Application Service
+After=network.target
+
+[Service]
+Type=simple
+User={{ app_user }}
+WorkingDirectory={{ app_source_dir | default(app_install_dir) }}
+Environment="NODE_ENV=production" "PORT={{ app_port }}"
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

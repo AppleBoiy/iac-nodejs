@@ -1,0 +1,49 @@
+name: Deploy Node Service
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      SERVER_IP: ${{ secrets.SERVER_IP }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Start ssh-agent and add key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Create dynamic inventory (Makefile)
+        if: env.SERVER_IP != ''
+        run: |
+          make inventory
+          cat ansible/inventory.ini
+
+      - name: Wait for SSH (Makefile)
+        if: env.SERVER_IP != ''
+        run: |
+          make wait-ssh
+
+      - name: Deploy (Makefile)
+        if: env.SERVER_IP != ''
+        run: |
+          make deploy

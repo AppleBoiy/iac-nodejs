@@ -1,0 +1,19 @@
+{
+  "name": "node-service-demo",
+  "version": "1.0.0",
+  "description": "Simple Node.js service that returns Hello, world!",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo \"Nothing to build\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

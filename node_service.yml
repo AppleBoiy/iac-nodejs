@@ -1,0 +1,13 @@
+---
+- name: Node.js service deployment
+  hosts: all
+  become: true
+
+  vars:
+    app_user: nodeapp
+    app_install_dir: /opt/node_service
+    app_port: 3000
+
+  roles:
+    - role: app
+      tags: ["app"]
