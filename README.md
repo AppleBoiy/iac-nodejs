@@ -1,83 +1,94 @@
-# AWS EC2 + Ansible + GitHub Actions: Node.js CI/CD (demo-terraform)
+# AWS EC2 Infrastructure with Terraform
 
-This project provisions an Ubuntu EC2 instance with Terraform, configures it with Ansible, and deploys a simple Node.js service. The app is served on port 80 via Nginx (reverse proxy to Node on port 3000). A GitHub Actions workflow demonstrates automated deployments using Ansible over SSH.
+This repository contains Infrastructure as Code to provision an Amazon EC2 instance with restricted SSH access. Use the provided Makefile for common operations instead of raw commands.
 
 ## Prerequisites
-- Terraform >= 1.5
-- AWS CLI configured (via environment variables, shared credentials, or SSO profile)
-- An SSH keypair on your machine (e.g., `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`)
-- Ansible installed locally (for manual runs), or use the provided GitHub Actions workflow
-- A GitHub repository to host this code
 
-## Infrastructure (Terraform)
-This configuration creates a single Ubuntu EC2 instance with a public IP and SSH access using your existing SSH key. It uses your AWS default VPC and a default subnet. Security group allows SSH (22) from your CIDR and HTTP (80) from anywhere.
+- Terraform (>= 1.5)
+- AWS account and credentials configured locally
+  - Via AWS CLI profiles (`aws configure`) or environment variables:
+    - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`
+  - Optional: `AWS_PROFILE` if using named profiles
+- SSH key pair available locally if you plan to create or use an EC2 key pair
 
-### Configure AWS credentials
-Use either environment variables or a profile. Example with a profile:
+## Quick Start
 
-## Configure AWS credentials
-Use either environment variables or a profile. Example with a profile:
+1) Clone and enter the project:
+- git clone <your-repo-url>
+- cd <your-repo-folder>
 
-```bash
-export AWS_PROFILE={{AWS_PROFILE}}
-aws sts get-caller-identity
-```
+2) Create and edit variables:
+- make tf-vars
+- Edit the generated terraform.tfvars to suit your environment. Example:
+  - instance_type     = "t3.micro"
+  - key_name          = "my-ec2-key"
+  - create_key_pair   = true
+  - public_key_path   = "~/.ssh/id_rsa.pub"
+  - allowed_ssh_cidr  = "<YOUR_IP>/32"
 
-If using access keys, set them as environment variables instead of pasting them in files:
+Notes:
+- Use an appropriate `instance_type` available in your target region.
+- `key_name` is the name of the AWS EC2 key pair.
+- Set `create_key_pair = true` to upload your local public key at `public_key_path`.
+- If you already have a key pair in AWS and want to use it, set `create_key_pair = false` and ensure `key_name` matches the existing AWS key pair; `public_key_path` can be omitted in that case.
+- `allowed_ssh_cidr` should be a restricted CIDR (avoid 0.0.0.0/0).
 
-```bash
-export AWS_ACCESS_KEY_ID={{AWS_ACCESS_KEY_ID}}
-export AWS_SECRET_ACCESS_KEY={{AWS_SECRET_ACCESS_KEY}}
-export AWS_DEFAULT_REGION=us-east-1
-```
+3) Initialize:
+- make tf-init
 
-## Setup variables
-Copy the example and edit as needed:
+4) Review the plan:
+- make tf-plan
 
-```bash
-cp terraform.tfvars.example terraform.tfvars
-```
+5) Apply to provision:
+- make tf-apply
 
-For better security, restrict SSH to your IP. You can automatically capture it:
+6) Get the instance public IP:
+- make ip
 
-```bash
-MY_IP=$(curl -s https://checkip.amazonaws.com)
-# Then either edit terraform.tfvars or pass it on the CLI when planning/applying:
-# -var "allowed_ssh_cidr=${MY_IP}/32"
-```
+7) (Optional) Wait until SSH is reachable:
+- make wait-ssh
 
-## Deploy
-Initialize and deploy:
+8) SSH into the instance:
+- make ssh
+- You can override the key path via PRIVATE_KEY, e.g., PRIVATE_KEY=~/.ssh/id_rsa make ssh
 
-```bash
-terraform init
-terraform validate
-terraform plan -out=tfplan
-terraform apply tfplan
-```
+9) (Optional) Deploy the Node app via Ansible:
+- Generate inventory from the instance IP: make inventory
+- Deploy: make deploy
+  - The repository URL is auto-detected from your git remote; override with REPO_URL=<git-url> if needed.
 
-## Outputs and SSH
-After apply, Terraform prints outputs including the public IP and a ready-to-copy SSH command. For example:
+## Configuration
 
-```bash
-terraform output -raw instance_public_ip
-terraform output -raw ssh_command
-```
+- Use `terraform.tfvars` for infrastructure variables (created by `make tf-vars`).
+- Region: set via your AWS config/profile or `AWS_DEFAULT_REGION` environment variable.
 
-Then SSH to the instance (Ubuntu images use the `ubuntu` user by default):
+Common Make variables you can override per command:
+- SERVER_IP: manually set the server IP if outputs are not yet available. Example: SERVER_IP=<PUBLIC_IP> make ssh
+- PRIVATE_KEY: path to your SSH private key for `make ssh`. Example: PRIVATE_KEY=~/.ssh/id_rsa make ssh
+- REPO_URL: Git repository used by the deploy step. Example: REPO_URL=https://github.com/user/repo.git make deploy
 
-```bash
-ssh -i ~/.ssh/id_rsa ubuntu@<PUBLIC_IP>
-```
+## Clean Up
 
-## Destroy
-When you're done, tear down the resources:
+- Tear down all resources: make tf-destroy
+- Remove generated files (plan, inventory): make clean
 
-```bash
-terraform destroy
-```
+## Troubleshooting
 
-## Notes
-- AMI is the latest Ubuntu 24.04 LTS for your chosen region.
-- Resources are tagged via the `tags` variable; customize as you wish.
-- The configuration uses the default VPC and one of its default subnets.
+- Credentials/Region issues:
+  - Ensure `AWS_PROFILE` (if used) is set, or `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION` are exported.
+- Key pair conflicts:
+  - If `create_key_pair = true` and a key pair with the same `key_name` already exists in AWS, adjust `key_name` or delete/rename the existing key pair.
+- SSH access denied:
+  - Confirm `allowed_ssh_cidr` includes your current public IP and that you are using the correct private key file and username for the AMI.
+- Repo URL for deploy:
+  - If auto-detection fails, pass `REPO_URL=<git-url>` to `make deploy`.
+
+## Security Best Practices
+
+- Use a restrictive `allowed_ssh_cidr` (prefer /32 for your IP).
+- Rotate SSH keys periodically.
+- Keep your AWS credentials secure and avoid committing them to version control.
+
+## Using Terraform
+
+- The Makefile wraps Terraform commands for convenience (init, plan, apply, destroy, outputs).
